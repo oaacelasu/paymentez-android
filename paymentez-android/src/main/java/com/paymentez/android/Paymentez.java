@@ -1,15 +1,26 @@
 package com.paymentez.android;
 
+import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import android.view.View;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.kount.api.DataCollector;
+import com.modirum.threedsv2.core.ConfigParameters;
+import com.modirum.threedsv2.core.ThreeDS2Service;
+import com.modirum.threedsv2.core.ThreeDSecurev2Service;
+import com.modirum.threedsv2.core.Transaction;
+import com.modirum.threedsv2.core.UiCustomization;
+import com.modirum.threedsv2.core.Warning;
 import com.paymentez.android.model.Card;
+import com.paymentez.android.rest.InitCallback;
 import com.paymentez.android.rest.PaymentezService;
 import com.paymentez.android.rest.PaymenezClient;
 import com.paymentez.android.rest.TokenCallback;
@@ -19,7 +30,11 @@ import com.paymentez.android.rest.model.CreateTokenResponse;
 import com.paymentez.android.rest.model.ErrorResponse;
 import com.paymentez.android.rest.model.PaymentezError;
 import com.paymentez.android.rest.model.User;
+//import com.squareup.picasso.Downloader;
 
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 import retrofit2.Call;
@@ -40,6 +55,9 @@ public class Paymentez{
     static int KOUNT_ENVIRONMENT = DataCollector.ENVIRONMENT_TEST;
 
     static PaymentezService paymentezService;
+    static ThreeDS2Service service;
+    static  ConfigParameters configParam;
+    static  UiCustomization uiConfig;
 
     /**
      * Init library
@@ -48,7 +66,7 @@ public class Paymentez{
      * @param paymentez_client_app_code provided by Paymentez.
      * @param paymentez_client_app_key provided by Paymentez.
      */
-    public static void setEnvironment(boolean test_mode, String paymentez_client_app_code, String paymentez_client_app_key) {
+    public static void setEnvironment(boolean test_mode, String paymentez_client_app_code, String paymentez_client_app_key, final Context mContext, InitCallback mCallback) {
         TEST_MODE = test_mode;
         PAYMENTEZ_CLIENT_APP_CODE = paymentez_client_app_code;
         PAYMENTEZ_CLIENT_APP_KEY = paymentez_client_app_key;
@@ -59,11 +77,7 @@ public class Paymentez{
             KOUNT_ENVIRONMENT = DataCollector.ENVIRONMENT_PRODUCTION;
 
         }
-
-
-
-
-
+        initThreeDS(mContext, mCallback);
     }
 
     /**
@@ -80,6 +94,33 @@ public class Paymentez{
 
         return paymentezService;
     }
+
+    public static String getThreeDSTransactionData(Context mContext){
+        Transaction transaction = service.createTransaction("VISA", "2.1.0");
+        HashMap<String, String> myMap = new HashMap<>();
+        myMap.put("trans_id", transaction.getAuthenticationRequestParameters().getSDKTransactionID());
+        myMap.put("reference_number", transaction.getAuthenticationRequestParameters().getSDKReferenceNumber());
+        myMap.put("app_id", transaction.getAuthenticationRequestParameters().getSDKAppID());
+        myMap.put("enc_data", transaction.getAuthenticationRequestParameters().getDeviceData());
+        myMap.put("max_timeout", "5");
+        myMap.put("device_render_options_IF", "5");
+        myMap.put("device_render_options_UI", "01,02,03,04,05");
+        myMap.put("ephem_pub_key", transaction.getAuthenticationRequestParameters().getSDKEphemeralPublicKey());
+
+        Gson gson = new GsonBuilder().create();
+        final String json = gson.toJson(myMap);
+        Log.i("MIO", myMap.get("trans_id"));
+        Log.i("MIO", myMap.get("reference_number"));
+        Log.i("MIO", myMap.get("app_id"));
+        Log.i("MIO", myMap.get("enc_data"));
+        Log.i("MIO", myMap.get("max_timeout"));
+        Log.i("MIO", myMap.get("device_render_options_IF"));
+        Log.i("MIO", myMap.get("device_render_options_UI"));
+        Log.i("MIO", myMap.get("ephem_pub_key"));
+        return json;
+    }
+
+
 
     public static void getImageBin(Context mContext, String bin){
         paymentezService = PaymenezClient.getClient(mContext, TEST_MODE, PAYMENTEZ_CLIENT_APP_CODE, PAYMENTEZ_CLIENT_APP_KEY).create(PaymentezService.class);
@@ -202,4 +243,44 @@ public class Paymentez{
         return deviceSessionID;
     }
 
+    private static class InitThreeDSTask extends AsyncTask<Void, Void, List<Warning>> {
+
+        Context mContext;
+        InitCallback callback;
+
+        public InitThreeDSTask(Context mContext, InitCallback callback) {
+            this.mContext = mContext;
+            this.callback = callback;
+        }
+
+        @Override
+        protected List<Warning> doInBackground(Void... voids) {
+            service = new ThreeDSecurev2Service(mContext);
+            configParam = new ConfigParameters();
+            uiConfig = new UiCustomization();
+
+            service.initialize(mContext, configParam, null, uiConfig);
+            List<Warning> warnings = service.getWarnings();
+            return warnings;
+        }
+
+
+        @Override
+        protected void onPostExecute(List<Warning> result) {
+            Log.d("MIO", result.toString());
+            if(result.isEmpty()){
+                callback.onSuccess();
+            }
+            else {
+                PaymentezError error
+                        = new PaymentezError("Exception", "", "General Error");
+                callback.onError(error);
+            }
+
+        }
+    }
+
+    public static void initThreeDS(Context mContext, @NonNull final InitCallback callback){
+        new InitThreeDSTask(mContext, callback).execute();
+    }
 }

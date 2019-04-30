@@ -5,6 +5,8 @@ import com.paymentez.examplestore.rest.model.DeleteCardResponse;
 import com.paymentez.examplestore.rest.model.GetCardsResponse;
 import com.paymentez.examplestore.rest.model.VerifyResponse;
 
+import java.util.HashMap;
+
 import retrofit2.Call;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
@@ -26,6 +28,12 @@ public interface BackendService {
     Call<CreateChargeResponse> createCharge(@Field("uid") String uid, @Field("session_id") String session_id,
                                             @Field("token") String token, @Field("amount") double amount,
                                             @Field("dev_reference") String dev_reference, @Field("description") String description);
+
+    @FormUrlEncoded
+    @POST("/auth/enrollment")
+    Call<CreateChargeResponse> authentication (@Field("user") String user, @Field("order") String order,
+                                             @Field("card") String card, @Field("sdk_info") String sdk_info,
+                                             @Field("term_url") String term_url, @Field("device_type") String device_type);
 
     @FormUrlEncoded
     @POST("/delete-card")

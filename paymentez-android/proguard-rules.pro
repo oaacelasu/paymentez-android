@@ -17,3 +17,5 @@
 #}
 -keep class com.squareup.picasso.** { *; }
 -dontwarn com.squareup.picasso.**
+-dontwarn	com.modirum.threedsv2.**
+-keep	class	com.modirum.threedsv2.**

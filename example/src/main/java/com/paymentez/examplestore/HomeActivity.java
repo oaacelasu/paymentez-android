@@ -1,5 +1,6 @@
 package com.paymentez.examplestore;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -14,7 +15,13 @@ import android.view.View;
 import android.widget.Button;
 
 import com.paymentez.android.Paymentez;
+import com.paymentez.android.model.Card;
+import com.paymentez.android.rest.InitCallback;
+import com.paymentez.android.rest.model.PaymentezError;
+import com.paymentez.examplestore.utils.Alert;
 import com.paymentez.examplestore.utils.Constants;
+
+import java.util.List;
 
 public class HomeActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -49,8 +56,26 @@ public class HomeActivity extends AppCompatActivity
         });
 
         //Init library
-        Paymentez.setEnvironment(Constants.PAYMENTEZ_IS_TEST_MODE, Constants.PAYMENTEZ_CLIENT_APP_CODE, Constants.PAYMENTEZ_CLIENT_APP_KEY);
+        final ProgressDialog pd = new ProgressDialog(mContext);
+        pd.setMessage("");
+        pd.show();
+        Paymentez.setEnvironment(Constants.PAYMENTEZ_IS_TEST_MODE, Constants.PAYMENTEZ_CLIENT_APP_CODE, Constants.PAYMENTEZ_CLIENT_APP_KEY, this, new InitCallback() {
+            @Override
+            public void onError(PaymentezError error) {
+                pd.dismiss();
+                Alert.show(mContext,
+                        "Error",
+                        "Type: " + error.getType() + "\n" +
+                                "Help: " + error.getHelp() + "\n" +
+                                "Description: " + error.getDescription());
 
+            }
+
+            @Override
+            public void onSuccess() {
+                pd.dismiss();
+            }
+        });
     }
 
     @Override

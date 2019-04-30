@@ -13,6 +13,7 @@ import com.paymentez.android.model.Card;
 import com.paymentez.android.rest.TokenCallback;
 import com.paymentez.android.rest.model.PaymentezError;
 import com.paymentez.android.view.CardMultilineWidget;
+import com.paymentez.examplestore.rest.model.Transaction;
 import com.paymentez.examplestore.utils.Alert;
 import com.paymentez.examplestore.utils.Constants;
 
@@ -33,8 +34,6 @@ public class AddCardActivity extends AppCompatActivity {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowHomeEnabled(true);
         }
-
-
 
 
         final String uid = Constants.USER_ID;
@@ -84,8 +83,6 @@ public class AddCardActivity extends AppCompatActivity {
                                             "status: " + card.getStatus() + "\n" +
                                                     "message: " + card.getMessage());
                                 }
-
-
                             }
 
                             //TODO: Create charge or Save Token to your backend
