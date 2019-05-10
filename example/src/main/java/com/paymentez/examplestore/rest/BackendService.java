@@ -29,11 +29,7 @@ public interface BackendService {
                                             @Field("token") String token, @Field("amount") double amount,
                                             @Field("dev_reference") String dev_reference, @Field("description") String description);
 
-    @FormUrlEncoded
-    @POST("/auth/enrollment")
-    Call<CreateChargeResponse> authentication (@Field("user") String user, @Field("order") String order,
-                                             @Field("card") String card, @Field("sdk_info") String sdk_info,
-                                             @Field("term_url") String term_url, @Field("device_type") String device_type);
+
 
     @FormUrlEncoded
     @POST("/delete-card")

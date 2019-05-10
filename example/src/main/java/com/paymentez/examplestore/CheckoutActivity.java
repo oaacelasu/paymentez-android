@@ -1,5 +1,6 @@
 package com.paymentez.examplestore;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -18,10 +19,16 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.paymentez.android.Paymentez;
 import com.paymentez.android.model.Card;
+import com.paymentez.android.rest.AuthenticationCallback;
+import com.paymentez.android.rest.ChallengeCallback;
 import com.paymentez.android.rest.InitCallback;
 import com.paymentez.android.rest.PaymentezService;
+import com.paymentez.android.rest.TokenCallback;
+import com.paymentez.android.rest.model.CreateAuthenticateResponse;
 import com.paymentez.android.rest.model.ErrorResponse;
+import com.paymentez.android.rest.model.Order;
 import com.paymentez.android.rest.model.PaymentezError;
+import com.paymentez.android.rest.model.SdkInfo;
 import com.paymentez.examplestore.rest.BackendService;
 import com.paymentez.examplestore.rest.RetrofitFactory;
 import com.paymentez.examplestore.rest.model.CreateChargeResponse;
@@ -42,6 +49,7 @@ public class CheckoutActivity extends AppCompatActivity {
     TextView textViewCCLastFour;
     Button buttonPlaceOrder;
     Context mContext;
+    Activity mActivity;
     String CARD_TOKEN = "";
     int SELECT_CARD_REQUEST = 1004;
 
@@ -50,6 +58,7 @@ public class CheckoutActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_checkout);
         mContext = this;
+        mActivity = this;
 
         android.support.v7.app.ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -60,127 +69,124 @@ public class CheckoutActivity extends AppCompatActivity {
         final BackendService backendService = RetrofitFactory.getClient().create(BackendService.class);
 
 
-
         imageViewCCImage = (ImageView) findViewById(R.id.imageViewCCImage);
         textViewCCLastFour = (TextView) findViewById(R.id.textViewCCLastFour);
 
-        buttonPlaceOrder = (Button)findViewById(R.id.buttonPlaceOrder);
+        buttonPlaceOrder = (Button) findViewById(R.id.buttonPlaceOrder);
         buttonPlaceOrder.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(CARD_TOKEN == null || CARD_TOKEN.equals("")){
+                if (CARD_TOKEN == null || CARD_TOKEN.equals("")) {
                     Alert.show(mContext,
                             "Error",
                             "You Need to Select a Credit Card!");
-                }else{
+                } else {
+                    final double ORDER_AMOUNT_FOR_CCAPI = 10.5;
+                    final double ORDER_AMOUNT_AVOID_CHALENGE = 10;
+                    final double ORDER_AMOUNT_FOR_CHALENGE = 100;
 
-                    final ProgressDialog pd = new ProgressDialog(mContext);
-                    pd.setMessage("");
-                    pd.show();
+                    final String ORDER_ID = "" + System.currentTimeMillis();
+                    final String ORDER_DESCRIPTION = "ORDER #" + ORDER_ID;
+                    final String DEV_REFERENCE = ORDER_ID;
 
-                    double ORDER_AMOUNT = 10.5;
-                    String ORDER_ID = ""+System.currentTimeMillis();
-                    String ORDER_DESCRIPTION = "ORDER #" + ORDER_ID;
-                    String DEV_REFERENCE = ORDER_ID;
-                    Gson gson = new GsonBuilder().create();
+                    final SdkInfo sdk_info = Paymentez.getThreeDSTransactionData();
 
-                    String sdk_info = Paymentez.getThreeDSTransactionData(mContext);
+                    final Order order = new Order();
+                    order.setAmount(ORDER_AMOUNT_AVOID_CHALENGE);
+                    order.setDescription(ORDER_DESCRIPTION);
+                    order.setDev_reference(DEV_REFERENCE);
+                    Log.i("MIO", String.valueOf(order.getAmount()));
 
-                    HashMap<String, String> userMap = new HashMap<>();
-                    userMap.put("id", Constants.USER_ID);
-                    userMap.put("email", Constants.USER_EMAIL);
-                    final String user = gson.toJson(userMap);
+                    final Card card = new Card();
+                    card.setNumber("4116020000001087");
+                    card.setHolderName("Oscar Acelas");
+                    card.setExpiryMonth(9);
+                    card.setExpiryYear(2023);
 
-                    HashMap<String, String> orderMap = new HashMap<>();
-                    orderMap.put("amount", String.valueOf(ORDER_AMOUNT));
-                    orderMap.put("description", ORDER_DESCRIPTION);
-                    orderMap.put("dev_reference", DEV_REFERENCE);
-                    final String order = gson.toJson(orderMap);
+                    final ProgressDialog pd = Paymentez.getProgressDialog(mActivity);
 
-                    HashMap<String, String> cardMap = new HashMap<>();
-                    cardMap.put("number", "");
-                    cardMap.put("holder_name", "");
-                    cardMap.put("expiry_month", "");
-                    cardMap.put("expiry_year", "");
+                    Alert.showPayDialog(mContext,
+                            new ChallengeCallback() {
 
-                    final String card = gson.toJson(cardMap);
+                                private   void launchAuthenticate(){
+                                    pd.show();
+                                    Paymentez.authenticate(mContext, Constants.USER_ID, Constants.USER_EMAIL, order, card, sdk_info, "http://paymentez-stg-hrd.appspot.com/api/v1/test/application_callback/?modirium=True", "SDK", new AuthenticationCallback() {
+                                        public void onSuccess(CreateAuthenticateResponse response) {
+                                            pd.dismiss();
+                                            payment();
+                                            //TODO: Create charge or Save Token to your backend
+                                        }
 
+                                        public void onError(PaymentezError error) {
+                                            pd.dismiss();
+                                            Alert.show(mContext,
+                                                    "Error",
+                                                    "Type: " + error.getType() + "\n" +
+                                                            "Help: " + error.getHelp() + "\n" +
+                                                            "Description: " + error.getDescription());
 
-
-
-                    backendService.authentication(user, order, card, sdk_info, "http://your.url.com", "sdk").enqueue(new Callback<CreateChargeResponse>() {
-                        @Override
-                        public void onResponse(Call<CreateChargeResponse> call, Response<CreateChargeResponse> response) {
-                            pd.dismiss();
-                            CreateChargeResponse createChargeResponse = response.body();
-                            if(response.isSuccessful() && createChargeResponse != null && createChargeResponse.getTransaction() != null) {
-                                Alert.show(mContext,
-                                        "Successful Charge",
-                                        "status: " + createChargeResponse.getTransaction().getStatus() +
-                                                "\nstatus_detail: " + createChargeResponse.getTransaction().getStatusDetail() +
-                                                "\nmessage: " + createChargeResponse.getTransaction().getMessage() +
-                                                "\ntransaction_id:" + createChargeResponse.getTransaction().getId());
-                            }else {
-                                Gson gson = new GsonBuilder().create();
-                                try {
-                                    ErrorResponse errorResponse = gson.fromJson(response.errorBody().string(), ErrorResponse.class);
-                                    Alert.show(mContext,
-                                            "Error",
-                                            errorResponse.getError().getType());
-                                } catch (IOException e) {
-                                    e.printStackTrace();
+                                            //TODO: Handle error
+                                        }
+                                    });
                                 }
-                            }
-                        }
 
-                        @Override
-                        public void onFailure(Call<CreateChargeResponse> call, Throwable e) {
-                            pd.dismiss();
-                            Alert.show(mContext,
-                                    "Error",
-                                    e.getLocalizedMessage());
-                        }
-                    });
+                                private void payment(){
+                                    backendService.createCharge(Constants.USER_ID, Paymentez.getSessionId(mContext),
+                                            CARD_TOKEN, ORDER_AMOUNT_FOR_CCAPI, DEV_REFERENCE, ORDER_DESCRIPTION).enqueue(new Callback<CreateChargeResponse>() {
+                                        @Override
+                                        public void onResponse(Call<CreateChargeResponse> call, Response<CreateChargeResponse> response) {
+                                            pd.dismiss();
+                                            CreateChargeResponse createChargeResponse = response.body();
+                                            if(response.isSuccessful() && createChargeResponse != null && createChargeResponse.getTransaction() != null) {
+                                                Alert.show(mContext,
+                                                        "Successful Charge",
+                                                        "status: " + createChargeResponse.getTransaction().getStatus() +
+                                                                "\nstatus_detail: " + createChargeResponse.getTransaction().getStatusDetail() +
+                                                                "\nmessage: " + createChargeResponse.getTransaction().getMessage() +
+                                                                "\ntransaction_id:" + createChargeResponse.getTransaction().getId());
+                                            }else {
+                                                Gson gson = new GsonBuilder().create();
+                                                try {
+                                                    ErrorResponse errorResponse = gson.fromJson(response.errorBody().string(), ErrorResponse.class);
+                                                    Alert.show(mContext,
+                                                            "Error",
+                                                            errorResponse.getError().getType());
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+                                            }
+                                        }
 
-
-                   /* backendService.createCharge(Constants.USER_ID, Paymentez.getSessionId(mContext),
-                            CARD_TOKEN, ORDER_AMOUNT, DEV_REFERENCE, ORDER_DESCRIPTION).enqueue(new Callback<CreateChargeResponse>() {
-                        @Override
-                        public void onResponse(Call<CreateChargeResponse> call, Response<CreateChargeResponse> response) {
-                            pd.dismiss();
-                            CreateChargeResponse createChargeResponse = response.body();
-                            if(response.isSuccessful() && createChargeResponse != null && createChargeResponse.getTransaction() != null) {
-                                Alert.show(mContext,
-                                        "Successful Charge",
-                                        "status: " + createChargeResponse.getTransaction().getStatus() +
-                                                "\nstatus_detail: " + createChargeResponse.getTransaction().getStatusDetail() +
-                                                "\nmessage: " + createChargeResponse.getTransaction().getMessage() +
-                                                "\ntransaction_id:" + createChargeResponse.getTransaction().getId());
-                            }else {
-                                Gson gson = new GsonBuilder().create();
-                                try {
-                                    ErrorResponse errorResponse = gson.fromJson(response.errorBody().string(), ErrorResponse.class);
-                                    Alert.show(mContext,
-                                            "Error",
-                                            errorResponse.getError().getType());
-                                } catch (IOException e) {
-                                    e.printStackTrace();
+                                        @Override
+                                        public void onFailure(Call<CreateChargeResponse> call, Throwable e) {
+                                            pd.dismiss();
+                                            Alert.show(mContext,
+                                                    "Error",
+                                                    e.getLocalizedMessage());
+                                        }
+                                    });
                                 }
-                            }
-                        }
 
-                        @Override
-                        public void onFailure(Call<CreateChargeResponse> call, Throwable e) {
-                            pd.dismiss();
-                            Alert.show(mContext,
-                                    "Error",
-                                    e.getLocalizedMessage());
-                        }
-                    });*/
+
+
+                                @Override
+                                public void onAccept() {
+                                    order.setAmount(ORDER_AMOUNT_FOR_CHALENGE);
+                                    Log.i("MIO", String.valueOf(order.getAmount()));
+                                    launchAuthenticate();
+
+                                }
+
+                                @Override
+                                public void onAvoid() {
+                                    launchAuthenticate();
+                                }
+                            });
+
                 }
             }
         });
 
-        buttonSelectPayment = (LinearLayout)findViewById(R.id.buttonSelectPayment);
+        buttonSelectPayment = (LinearLayout) findViewById(R.id.buttonSelectPayment);
         buttonSelectPayment.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Intent intent = new Intent(mContext, ListCardsActivity.class);
@@ -210,7 +216,7 @@ public class CheckoutActivity extends AppCompatActivity {
                 String CARD_TYPE = data.getStringExtra("CARD_TYPE");
                 String CARD_LAST4 = data.getStringExtra("CARD_LAST4");
 
-                if(CARD_LAST4 != null && !CARD_LAST4.equals("")){
+                if (CARD_LAST4 != null && !CARD_LAST4.equals("")) {
                     textViewCCLastFour.setText("XXXX." + CARD_LAST4);
                     imageViewCCImage.setImageResource(Card.getDrawableBrand(CARD_TYPE));
                 }

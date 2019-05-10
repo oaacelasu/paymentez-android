@@ -12,7 +12,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 public class PaymentezUtils {
 
 
-    public static String SERVER_DEV_URL = "https://ccapi-stg.paymentez.com";
+    public static String SERVER_DEV_URL = "https://ccapi-dev.paymentez.com";
     public static String SERVER_PROD_URL = "https://ccapi.paymentez.com";
 
     private static String getUniqToken(String auth_timestamp, String paymentez_client_app_key) {

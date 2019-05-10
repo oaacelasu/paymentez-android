@@ -12,6 +12,7 @@ import android.view.View;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.kount.api.DataCollector;
 import com.modirum.threedsv2.core.ConfigParameters;
 import com.modirum.threedsv2.core.ThreeDS2Service;
@@ -20,15 +21,21 @@ import com.modirum.threedsv2.core.Transaction;
 import com.modirum.threedsv2.core.UiCustomization;
 import com.modirum.threedsv2.core.Warning;
 import com.paymentez.android.model.Card;
+import com.paymentez.android.rest.AuthenticationCallback;
 import com.paymentez.android.rest.InitCallback;
 import com.paymentez.android.rest.PaymentezService;
 import com.paymentez.android.rest.PaymenezClient;
 import com.paymentez.android.rest.TokenCallback;
 import com.paymentez.android.rest.model.CardBinResponse;
+import com.paymentez.android.rest.model.CreateAuthenticateRequest;
+import com.paymentez.android.rest.model.CreateAuthenticateResponse;
 import com.paymentez.android.rest.model.CreateTokenRequest;
 import com.paymentez.android.rest.model.CreateTokenResponse;
+import com.paymentez.android.rest.model.Ephemeral;
 import com.paymentez.android.rest.model.ErrorResponse;
+import com.paymentez.android.rest.model.Order;
 import com.paymentez.android.rest.model.PaymentezError;
+import com.paymentez.android.rest.model.SdkInfo;
 import com.paymentez.android.rest.model.User;
 //import com.squareup.picasso.Downloader;
 
@@ -58,6 +65,7 @@ public class Paymentez{
     static ThreeDS2Service service;
     static  ConfigParameters configParam;
     static  UiCustomization uiConfig;
+    static  Transaction transaction;
 
     /**
      * Init library
@@ -95,31 +103,35 @@ public class Paymentez{
         return paymentezService;
     }
 
-    public static String getThreeDSTransactionData(Context mContext){
-        Transaction transaction = service.createTransaction("VISA", "2.1.0");
-        HashMap<String, String> myMap = new HashMap<>();
-        myMap.put("trans_id", transaction.getAuthenticationRequestParameters().getSDKTransactionID());
-        myMap.put("reference_number", transaction.getAuthenticationRequestParameters().getSDKReferenceNumber());
-        myMap.put("app_id", transaction.getAuthenticationRequestParameters().getSDKAppID());
-        myMap.put("enc_data", transaction.getAuthenticationRequestParameters().getDeviceData());
-        myMap.put("max_timeout", "5");
-        myMap.put("device_render_options_IF", "5");
-        myMap.put("device_render_options_UI", "01,02,03,04,05");
-        myMap.put("ephem_pub_key", transaction.getAuthenticationRequestParameters().getSDKEphemeralPublicKey());
+    public static SdkInfo getThreeDSTransactionData(){
+        transaction = service.createTransaction("VISA", "2.1.0");
+
+        SdkInfo sdkInfo = new SdkInfo();
+        sdkInfo.setTrans_id(transaction.getAuthenticationRequestParameters().getSDKTransactionID());
+        sdkInfo.setReference_number(transaction.getAuthenticationRequestParameters().getSDKReferenceNumber());
+        sdkInfo.setApp_id( transaction.getAuthenticationRequestParameters().getSDKAppID());
+        sdkInfo.setEnc_data(transaction.getAuthenticationRequestParameters().getDeviceData());
+        sdkInfo.setMax_timeout(5);
+        sdkInfo.setOptions_IF(3);
+        sdkInfo.setOptions_UI("01,02,03,04,05");
 
         Gson gson = new GsonBuilder().create();
-        final String json = gson.toJson(myMap);
-        Log.i("MIO", myMap.get("trans_id"));
-        Log.i("MIO", myMap.get("reference_number"));
-        Log.i("MIO", myMap.get("app_id"));
-        Log.i("MIO", myMap.get("enc_data"));
-        Log.i("MIO", myMap.get("max_timeout"));
-        Log.i("MIO", myMap.get("device_render_options_IF"));
-        Log.i("MIO", myMap.get("device_render_options_UI"));
-        Log.i("MIO", myMap.get("ephem_pub_key"));
-        return json;
-    }
+        Ephemeral ephemeral = gson.fromJson(transaction.getAuthenticationRequestParameters().getSDKEphemeralPublicKey(), Ephemeral.class);
+        sdkInfo.setEphem_pub_key(ephemeral.getKey());
 
+        Log.i("MIO", sdkInfo.getTrans_id());
+        Log.i("MIO", sdkInfo.getReference_number());
+        Log.i("MIO", sdkInfo.getApp_id());
+        Log.i("MIO", sdkInfo.getEnc_data());
+        Log.i("MIO", String.valueOf(sdkInfo.getMax_timeout()));
+        Log.i("MIO", String.valueOf(sdkInfo.getOptions_IF()));
+        Log.i("MIO", sdkInfo.getOptions_UI());
+        Log.i("MIO", sdkInfo.getEphem_pub_key());
+        return sdkInfo;
+    }
+    public static ProgressDialog getProgressDialog(Activity currentActivity){
+        return transaction.getProgressView(currentActivity);
+    }
 
 
     public static void getImageBin(Context mContext, String bin){
@@ -192,6 +204,62 @@ public class Paymentez{
 
             @Override
             public void onFailure(Call<CreateTokenResponse> call, Throwable e) {
+                PaymentezError error
+                        = new PaymentezError("Network Exception",
+                        "Invoked when a network exception occurred communicating to the server.", e.getLocalizedMessage());
+                callback.onError(error);
+                return;
+            }
+        });
+    }
+
+
+
+    public static void authenticate(Context mContext, @NonNull final String uid, @NonNull final String email, @NonNull final Order order, @NonNull final Card card, @NonNull final SdkInfo sdk_info, @NonNull final String term_url, @NonNull final String device_type,  @NonNull final AuthenticationCallback callback) {
+
+        paymentezService = PaymenezClient.getClient(mContext, TEST_MODE, PAYMENTEZ_CLIENT_APP_CODE, PAYMENTEZ_CLIENT_APP_KEY).create(PaymentezService.class);
+        User user = new User();
+        user.setId(uid);
+        user.setEmail(email);
+
+        CreateAuthenticateRequest createAuthenticateRequest = new CreateAuthenticateRequest();
+        createAuthenticateRequest.setUser(user);
+        createAuthenticateRequest.setOrder(order);
+        createAuthenticateRequest.setCard(card);
+        createAuthenticateRequest.setSdf_info(sdk_info);
+        createAuthenticateRequest.setTerm_url(term_url);
+        createAuthenticateRequest.setDevice_type(device_type);
+
+        paymentezService.authenticate(createAuthenticateRequest).enqueue(new Callback<CreateAuthenticateResponse>() {
+            @Override
+            public void onResponse(Call<CreateAuthenticateResponse> call, Response<CreateAuthenticateResponse> response) {
+                CreateAuthenticateResponse createAuthenticateResponse = response.body();
+                Log.d("MIO", response.toString());
+                if(response.isSuccessful()) {
+                    callback.onSuccess(createAuthenticateResponse);
+                    return;
+                }else {
+                    PaymentezError error
+                            = new PaymentezError("Exception", "", "General Error");
+                    try {
+                        Gson gson = new GsonBuilder().create();
+                        ErrorResponse errorResponse = gson.fromJson(response.errorBody().string(), ErrorResponse.class);
+                        callback.onError(errorResponse.getError());
+                        return;
+                    } catch (Exception e) {
+                        try {
+                            error = new PaymentezError("Exception", "Http Code: " + response.code(), response.message());
+                        } catch (Exception e2) {
+                        }
+                    }
+                    callback.onError(error);
+                    return;
+
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CreateAuthenticateResponse> call, Throwable e) {
                 PaymentezError error
                         = new PaymentezError("Network Exception",
                         "Invoked when a network exception occurred communicating to the server.", e.getLocalizedMessage());
