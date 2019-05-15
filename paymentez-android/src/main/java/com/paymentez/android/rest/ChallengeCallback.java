@@ -1,13 +1,18 @@
 package com.paymentez.android.rest;
 
-import com.paymentez.android.rest.model.CreateAuthenticateResponse;
-import com.paymentez.android.rest.model.CreateTokenResponse;
-import com.paymentez.android.rest.model.PaymentezError;
 
+import com.paymentez.android.rest.model.PaymentezError;
 
 public interface ChallengeCallback {
 
-    void onAccept();
+    void completed(String transactionStatus);
 
-    void onAvoid();
+    void cancelled();
+
+    void timedout();
+
+    void protocolError(PaymentezError errorMessage);
+
+    void runtimeError(PaymentezError errorMessage);
+
 }

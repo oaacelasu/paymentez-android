@@ -15,13 +15,10 @@ public class CreateAuthenticateResponse {
     @Expose
     private Transaction transaction;
 
-    @SerializedName("challenge_request")
+    @SerializedName("sdk_response")
     @Expose
-    private String challenge_request;
+    private SdkResponse sdk_response;
 
-    @SerializedName("hidden_iframe")
-    @Expose
-    private String hidden_iframe;
 
     public Authentication getAuthentication() {
         return authentication;
@@ -39,19 +36,11 @@ public class CreateAuthenticateResponse {
         this.transaction = transaction;
     }
 
-    public String getChallenge_request() {
-        return challenge_request;
+    public SdkResponse getSdk_response() {
+        return sdk_response;
     }
 
-    public void setChallenge_request(String challenge_request) {
-        this.challenge_request = challenge_request;
-    }
-
-    public String getHidden_iframe() {
-        return hidden_iframe;
-    }
-
-    public void setHidden_iframe(String hidden_iframe) {
-        this.hidden_iframe = hidden_iframe;
+    public void setSdk_response(SdkResponse sdk_response) {
+        this.sdk_response = sdk_response;
     }
 }

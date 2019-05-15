@@ -5,7 +5,6 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.DrawableRes;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MenuItem;
@@ -17,13 +16,10 @@ import android.widget.TextView;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.paymentez.android.Paymentez;
 import com.paymentez.android.model.Card;
 import com.paymentez.android.rest.AuthenticationCallback;
 import com.paymentez.android.rest.ChallengeCallback;
-import com.paymentez.android.rest.InitCallback;
-import com.paymentez.android.rest.PaymentezService;
-import com.paymentez.android.rest.TokenCallback;
+import com.paymentez.android.rest.PaymentDialogCallback;
 import com.paymentez.android.rest.model.CreateAuthenticateResponse;
 import com.paymentez.android.rest.model.ErrorResponse;
 import com.paymentez.android.rest.model.Order;
@@ -36,11 +32,13 @@ import com.paymentez.examplestore.utils.Alert;
 import com.paymentez.examplestore.utils.Constants;
 
 import java.io.IOException;
-import java.util.HashMap;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+
+import static com.paymentez.android.Paymentez.*;
+import static com.paymentez.examplestore.utils.Alert.showPayDialog;
 
 public class CheckoutActivity extends AppCompatActivity {
 
@@ -88,7 +86,7 @@ public class CheckoutActivity extends AppCompatActivity {
                     final String ORDER_DESCRIPTION = "ORDER #" + ORDER_ID;
                     final String DEV_REFERENCE = ORDER_ID;
 
-                    final SdkInfo sdk_info = Paymentez.getThreeDSTransactionData();
+                    final SdkInfo sdk_info = getThreeDSTransactionData();
 
                     final Order order = new Order();
                     order.setAmount(ORDER_AMOUNT_AVOID_CHALENGE);
@@ -102,17 +100,30 @@ public class CheckoutActivity extends AppCompatActivity {
                     card.setExpiryMonth(9);
                     card.setExpiryYear(2023);
 
-                    final ProgressDialog pd = Paymentez.getProgressDialog(mActivity);
+                    final ProgressDialog pd = getProgressDialog(mActivity);
 
-                    Alert.showPayDialog(mContext,
-                            new ChallengeCallback() {
+                    showPayDialog(mContext,
+                            new PaymentDialogCallback() {
 
                                 private   void launchAuthenticate(){
                                     pd.show();
-                                    Paymentez.authenticate(mContext, Constants.USER_ID, Constants.USER_EMAIL, order, card, sdk_info, "http://paymentez-stg-hrd.appspot.com/api/v1/test/application_callback/?modirium=True", "SDK", new AuthenticationCallback() {
+                                    authenticate(mContext, Constants.USER_ID, Constants.USER_EMAIL, order, card, sdk_info, "http://paymentez-stg-hrd.appspot.com/api/v1/test/application_callback/?modirium=True", "SDK", new AuthenticationCallback() {
                                         public void onSuccess(CreateAuthenticateResponse response) {
                                             pd.dismiss();
-                                            payment();
+
+                                            boolean challenge = response.getAuthentication().getStatus().contentEquals("C");
+                                            boolean authenticated = response.getAuthentication().getStatus().contentEquals("Y");
+
+                                            if(!challenge)
+                                                doChallenge(response);
+                                            else if (authenticated)
+                                                payment();
+                                            else
+                                                Alert.show(mContext,
+                                                        "Authentication",
+                                                        "Status: " + response.getAuthentication().getStatus() + "\n" +
+                                                                "Message: " + response.getAuthentication().getReturn_message() + "\n" +
+                                                                "Code: " + response.getAuthentication().getReturn_code());
                                             //TODO: Create charge or Save Token to your backend
                                         }
 
@@ -130,7 +141,7 @@ public class CheckoutActivity extends AppCompatActivity {
                                 }
 
                                 private void payment(){
-                                    backendService.createCharge(Constants.USER_ID, Paymentez.getSessionId(mContext),
+                                    backendService.createCharge(Constants.USER_ID, getSessionId(mContext),
                                             CARD_TOKEN, ORDER_AMOUNT_FOR_CCAPI, DEV_REFERENCE, ORDER_DESCRIPTION).enqueue(new Callback<CreateChargeResponse>() {
                                         @Override
                                         public void onResponse(Call<CreateChargeResponse> call, Response<CreateChargeResponse> response) {
@@ -166,14 +177,56 @@ public class CheckoutActivity extends AppCompatActivity {
                                     });
                                 }
 
+                                private void doChallenge(CreateAuthenticateResponse response){
 
+                                    doChalenge(mActivity, response, new ChallengeCallback() {
+
+                                        @Override
+                                        public void completed(String transactionStatus) {
+                                            boolean authenticated = transactionStatus.contentEquals("Y");
+                                            if(authenticated)
+                                                payment();
+                                        }
+
+                                        @Override
+                                        public void cancelled() {
+                                            Alert.show(mContext,
+                                                    "Cancelled",
+                                                    "");
+                                        }
+
+                                        @Override
+                                        public void timedout() {
+                                            Alert.show(mContext,
+                                                    "Timeout",
+                                                    "");
+                                        }
+
+                                        @Override
+                                        public void protocolError(PaymentezError error) {
+                                            Alert.show(mContext,
+                                                    "Error",
+                                                    "Type: " + error.getType() + "\n" +
+                                                            "Help: " + error.getHelp() + "\n" +
+                                                            "Description: " + error.getDescription());
+                                        }
+
+                                        @Override
+                                        public void runtimeError(PaymentezError error) {
+                                            Alert.show(mContext,
+                                                    "Error",
+                                                    "Type: " + error.getType() + "\n" +
+                                                            "Help: " + error.getHelp() + "\n" +
+                                                            "Description: " + error.getDescription());
+                                        }
+                                    }, 500);
+                                }
 
                                 @Override
                                 public void onAccept() {
                                     order.setAmount(ORDER_AMOUNT_FOR_CHALENGE);
                                     Log.i("MIO", String.valueOf(order.getAmount()));
                                     launchAuthenticate();
-
                                 }
 
                                 @Override

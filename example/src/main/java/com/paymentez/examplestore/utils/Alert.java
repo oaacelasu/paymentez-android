@@ -4,9 +4,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
 
-import com.paymentez.android.rest.ChallengeCallback;
-
-import javax.security.auth.callback.Callback;
+import com.paymentez.android.rest.PaymentDialogCallback;
 
 /**
  * Created by mmucito on 22/09/17.
@@ -28,7 +26,7 @@ public class Alert {
         alert11.show();
     }
 
-    public static void showPayDialog(Context mContext, final ChallengeCallback callback){
+    public static void showPayDialog(Context mContext, final PaymentDialogCallback callback){
         AlertDialog.Builder builder1 = new AlertDialog.Builder(mContext);
         builder1.setTitle("Place Order With Authentication 3DS");
         builder1.setMessage("Do you want to take an authentication challenge?");

@@ -14,7 +14,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.kount.api.DataCollector;
+import com.modirum.threedsv2.core.ChallengeParameters;
+import com.modirum.threedsv2.core.ChallengeStatusReceiver;
+import com.modirum.threedsv2.core.CompletionEvent;
 import com.modirum.threedsv2.core.ConfigParameters;
+import com.modirum.threedsv2.core.ProtocolConstants;
+import com.modirum.threedsv2.core.ProtocolErrorEvent;
+import com.modirum.threedsv2.core.RuntimeErrorEvent;
 import com.modirum.threedsv2.core.ThreeDS2Service;
 import com.modirum.threedsv2.core.ThreeDSecurev2Service;
 import com.modirum.threedsv2.core.Transaction;
@@ -22,6 +28,7 @@ import com.modirum.threedsv2.core.UiCustomization;
 import com.modirum.threedsv2.core.Warning;
 import com.paymentez.android.model.Card;
 import com.paymentez.android.rest.AuthenticationCallback;
+import com.paymentez.android.rest.ChallengeCallback;
 import com.paymentez.android.rest.InitCallback;
 import com.paymentez.android.rest.PaymentezService;
 import com.paymentez.android.rest.PaymenezClient;
@@ -127,10 +134,62 @@ public class Paymentez{
         Log.i("MIO", String.valueOf(sdkInfo.getOptions_IF()));
         Log.i("MIO", sdkInfo.getOptions_UI());
         Log.i("MIO", sdkInfo.getEphem_pub_key());
+        Log.i("MIO", ProtocolConstants.TransactionStatus);
+        Log.i("MIO", ProtocolConstants.ThreeDSServerTransID);
+        Log.i("MIO", ProtocolConstants.ACSTransactionID);
+        Log.i("MIO", ProtocolConstants.ACSSignedContent);
+
         return sdkInfo;
     }
     public static ProgressDialog getProgressDialog(Activity currentActivity){
         return transaction.getProgressView(currentActivity);
+    }
+
+    public static void doChalenge(final Activity activity, CreateAuthenticateResponse response, final ChallengeCallback callback, int timeout){
+        ChallengeParameters challengeParameters = new ChallengeParameters();
+        challengeParameters.set3DSServerTransactionID(response.getAuthentication().getReference_id());
+        challengeParameters.setAcsTransactionID(response.getSdk_response().getAcs_trans_id());
+        challengeParameters.setACSSignedContent(response.getSdk_response().getAcs_signed_content());
+//        challengeParameters.setAcsRefNumber(ProtocolConstants.ACSReferenceNumber);
+        transaction.doChallenge(activity, challengeParameters, new ChallengeStatusReceiver() {
+            @Override
+            public void completed(CompletionEvent completionEvent) {
+//At this point, the Merchant app can contact the 3DS Server
+//to determine the result of the challenge
+                callback.completed(completionEvent.getTransactionStatus());
+
+            }
+
+            @Override
+            public void cancelled() {
+//can go to Cancelled view if desired
+                callback.cancelled();
+            }
+
+            @Override
+            public void timedout() {
+callback.timedout();
+                //can show error alert
+            }
+
+            @Override
+            public void protocolError(ProtocolErrorEvent protocolErrorEvent) {
+                PaymentezError error
+                        = new PaymentezError(protocolErrorEvent.getErrorMessage().getErrorMessageType(), protocolErrorEvent.getErrorMessage().getErrorDetail(), protocolErrorEvent.getErrorMessage().getErrorDescription());
+                callback.protocolError(error);
+                //can show error alert
+
+            }
+
+            @Override
+            public void runtimeError(RuntimeErrorEvent runtimeErrorEvent) {
+                PaymentezError error
+                        = new PaymentezError(runtimeErrorEvent.getErrorMessage(), "", "");
+                callback.runtimeError(error);
+                //can show error alert
+
+            }
+        }, timeout);
     }
 
 
@@ -237,6 +296,7 @@ public class Paymentez{
                 Log.d("MIO", response.toString());
                 if(response.isSuccessful()) {
                     callback.onSuccess(createAuthenticateResponse);
+
                     return;
                 }else {
                     PaymentezError error
