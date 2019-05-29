@@ -97,8 +97,8 @@ public class CheckoutActivity extends AppCompatActivity {
                     final Card card = new Card();
                     card.setNumber("4116020000001087");
                     card.setHolderName("Oscar Acelas");
-                    card.setExpiryMonth(9);
-                    card.setExpiryYear(2023);
+                    card.setExpiryMonth(12);
+                    card.setExpiryYear(2030);
 
                     final ProgressDialog pd = getProgressDialog(mActivity);
 
@@ -109,12 +109,10 @@ public class CheckoutActivity extends AppCompatActivity {
                                     pd.show();
                                     authenticate(mContext, Constants.USER_ID, Constants.USER_EMAIL, order, card, sdk_info, "http://paymentez-stg-hrd.appspot.com/api/v1/test/application_callback/?modirium=True", "SDK", new AuthenticationCallback() {
                                         public void onSuccess(CreateAuthenticateResponse response) {
-                                            pd.dismiss();
-
                                             boolean challenge = response.getAuthentication().getStatus().contentEquals("C");
                                             boolean authenticated = response.getAuthentication().getStatus().contentEquals("Y");
 
-                                            if(!challenge)
+                                            if(challenge)
                                                 doChallenge(response);
                                             else if (authenticated)
                                                 payment();
@@ -178,8 +176,7 @@ public class CheckoutActivity extends AppCompatActivity {
                                 }
 
                                 private void doChallenge(CreateAuthenticateResponse response){
-
-                                    doChalenge(mActivity, response, new ChallengeCallback() {
+                                    doChallengeThreeDS(mActivity, response, new ChallengeCallback() {
 
                                         @Override
                                         public void completed(String transactionStatus) {
@@ -219,7 +216,7 @@ public class CheckoutActivity extends AppCompatActivity {
                                                             "Help: " + error.getHelp() + "\n" +
                                                             "Description: " + error.getDescription());
                                         }
-                                    }, 500);
+                                    }, 6);
                                 }
 
                                 @Override

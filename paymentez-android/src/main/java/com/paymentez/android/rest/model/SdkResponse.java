@@ -13,6 +13,10 @@ public class SdkResponse {
     @Expose
     private String acs_signed_content;
 
+    @SerializedName("acs_reference_number")
+    @Expose
+    private String acs_reference_number;
+
     public String getAcs_trans_id() {
         return acs_trans_id;
     }
@@ -27,5 +31,13 @@ public class SdkResponse {
 
     public void setAcs_signed_content(String acs_signed_content) {
         this.acs_signed_content = acs_signed_content;
+    }
+
+    public String getAcs_reference_number() {
+        return acs_reference_number;
+    }
+
+    public void setAcs_reference_number(String acs_reference_number) {
+        this.acs_reference_number = acs_reference_number;
     }
 }

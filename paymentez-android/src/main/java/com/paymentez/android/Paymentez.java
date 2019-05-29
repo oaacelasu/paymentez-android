@@ -125,71 +125,62 @@ public class Paymentez{
         Gson gson = new GsonBuilder().create();
         Ephemeral ephemeral = gson.fromJson(transaction.getAuthenticationRequestParameters().getSDKEphemeralPublicKey(), Ephemeral.class);
         sdkInfo.setEphem_pub_key(ephemeral.getKey());
-
-        Log.i("MIO", sdkInfo.getTrans_id());
-        Log.i("MIO", sdkInfo.getReference_number());
-        Log.i("MIO", sdkInfo.getApp_id());
-        Log.i("MIO", sdkInfo.getEnc_data());
-        Log.i("MIO", String.valueOf(sdkInfo.getMax_timeout()));
-        Log.i("MIO", String.valueOf(sdkInfo.getOptions_IF()));
-        Log.i("MIO", sdkInfo.getOptions_UI());
-        Log.i("MIO", sdkInfo.getEphem_pub_key());
-        Log.i("MIO", ProtocolConstants.TransactionStatus);
-        Log.i("MIO", ProtocolConstants.ThreeDSServerTransID);
-        Log.i("MIO", ProtocolConstants.ACSTransactionID);
-        Log.i("MIO", ProtocolConstants.ACSSignedContent);
-
         return sdkInfo;
     }
     public static ProgressDialog getProgressDialog(Activity currentActivity){
         return transaction.getProgressView(currentActivity);
     }
 
-    public static void doChalenge(final Activity activity, CreateAuthenticateResponse response, final ChallengeCallback callback, int timeout){
-        ChallengeParameters challengeParameters = new ChallengeParameters();
+    public static void doChallengeThreeDS(final Activity activity, CreateAuthenticateResponse response, final ChallengeCallback callback, final int timeout){
+
+        final ChallengeParameters challengeParameters = new ChallengeParameters();
         challengeParameters.set3DSServerTransactionID(response.getAuthentication().getReference_id());
         challengeParameters.setAcsTransactionID(response.getSdk_response().getAcs_trans_id());
         challengeParameters.setACSSignedContent(response.getSdk_response().getAcs_signed_content());
-//        challengeParameters.setAcsRefNumber(ProtocolConstants.ACSReferenceNumber);
-        transaction.doChallenge(activity, challengeParameters, new ChallengeStatusReceiver() {
-            @Override
-            public void completed(CompletionEvent completionEvent) {
+        challengeParameters.setAcsRefNumber(response.getSdk_response().getAcs_reference_number());
+        new Thread() {
+            public void run() {
+                transaction.doChallenge(activity, challengeParameters, new ChallengeStatusReceiver() {
+                    @Override
+                    public void completed(CompletionEvent completionEvent) {
 //At this point, the Merchant app can contact the 3DS Server
 //to determine the result of the challenge
-                callback.completed(completionEvent.getTransactionStatus());
+                        callback.completed(completionEvent.getTransactionStatus());
 
-            }
+                    }
 
-            @Override
-            public void cancelled() {
+                    @Override
+                    public void cancelled() {
 //can go to Cancelled view if desired
-                callback.cancelled();
+                        callback.cancelled();
+                    }
+
+                    @Override
+                    public void timedout() {
+                        callback.timedout();
+                        //can show error alert
+                    }
+
+                    @Override
+                    public void protocolError(ProtocolErrorEvent protocolErrorEvent) {
+                        PaymentezError error
+                                = new PaymentezError(protocolErrorEvent.getErrorMessage().getErrorMessageType(), protocolErrorEvent.getErrorMessage().getErrorDetail(), protocolErrorEvent.getErrorMessage().getErrorDescription());
+                        callback.protocolError(error);
+                        //can show error alert
+
+                    }
+
+                    @Override
+                    public void runtimeError(RuntimeErrorEvent runtimeErrorEvent) {
+                        PaymentezError error
+                                = new PaymentezError(runtimeErrorEvent.getErrorMessage(), "", "");
+                        callback.runtimeError(error);
+                        //can show error alert
+
+                    }
+                }, timeout);
             }
-
-            @Override
-            public void timedout() {
-callback.timedout();
-                //can show error alert
-            }
-
-            @Override
-            public void protocolError(ProtocolErrorEvent protocolErrorEvent) {
-                PaymentezError error
-                        = new PaymentezError(protocolErrorEvent.getErrorMessage().getErrorMessageType(), protocolErrorEvent.getErrorMessage().getErrorDetail(), protocolErrorEvent.getErrorMessage().getErrorDescription());
-                callback.protocolError(error);
-                //can show error alert
-
-            }
-
-            @Override
-            public void runtimeError(RuntimeErrorEvent runtimeErrorEvent) {
-                PaymentezError error
-                        = new PaymentezError(runtimeErrorEvent.getErrorMessage(), "", "");
-                callback.runtimeError(error);
-                //can show error alert
-
-            }
-        }, timeout);
+        }.start();
     }
 
 
@@ -388,7 +379,9 @@ callback.timedout();
             uiConfig = new UiCustomization();
 
             service.initialize(mContext, configParam, null, uiConfig);
+
             List<Warning> warnings = service.getWarnings();
+
             return warnings;
         }
 
