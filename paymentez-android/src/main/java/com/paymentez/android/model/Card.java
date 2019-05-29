@@ -202,6 +202,11 @@ public class Card extends PaymentezJsonModel implements PaymentezPaymentSource {
     @Expose
     private String number;
 
+
+    @SerializedName("origin")
+    @Expose
+    private String origin;
+
     @SerializedName("token")
     @Expose
     private String token;
@@ -442,6 +447,14 @@ public class Card extends PaymentezJsonModel implements PaymentezPaymentSource {
         } catch (JSONException ignored) {
             return null;
         }
+    }
+
+    public String getOrigin() {
+        return origin;
+    }
+
+    public void setOrigin(String origin) {
+        this.origin = origin;
     }
 
     @Nullable

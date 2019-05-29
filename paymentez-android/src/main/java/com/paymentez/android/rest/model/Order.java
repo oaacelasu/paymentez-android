@@ -16,6 +16,10 @@ public class Order {
     @Expose
     private String dev_reference;
 
+    @SerializedName("vat")
+    @Expose
+    private int vat;
+
     public double getAmount() {
         return amount;
     }
@@ -38,5 +42,13 @@ public class Order {
 
     public void setDev_reference(String dev_reference) {
         this.dev_reference = dev_reference;
+    }
+
+    public int getVat() {
+        return vat;
+    }
+
+    public void setVat(int vat) {
+        this.vat = vat;
     }
 }

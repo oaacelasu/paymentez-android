@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -21,6 +23,8 @@ import com.paymentez.android.rest.AuthenticationCallback;
 import com.paymentez.android.rest.ChallengeCallback;
 import com.paymentez.android.rest.PaymentDialogCallback;
 import com.paymentez.android.rest.model.CreateAuthenticateResponse;
+import com.paymentez.android.rest.model.CreateDebitWTokenResponse;
+import com.paymentez.android.rest.model.DebitWTokenCallback;
 import com.paymentez.android.rest.model.ErrorResponse;
 import com.paymentez.android.rest.model.Order;
 import com.paymentez.android.rest.model.PaymentezError;
@@ -30,6 +34,8 @@ import com.paymentez.examplestore.rest.RetrofitFactory;
 import com.paymentez.examplestore.rest.model.CreateChargeResponse;
 import com.paymentez.examplestore.utils.Alert;
 import com.paymentez.examplestore.utils.Constants;
+
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 
@@ -51,6 +57,11 @@ public class CheckoutActivity extends AppCompatActivity {
     String CARD_TOKEN = "";
     int SELECT_CARD_REQUEST = 1004;
 
+    TextView product1Quantity;
+    TextView product2Quantity;
+    TextView product1Price;
+    TextView product2Price;
+    TextView totalToPay;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,6 +80,12 @@ public class CheckoutActivity extends AppCompatActivity {
 
         imageViewCCImage = (ImageView) findViewById(R.id.imageViewCCImage);
         textViewCCLastFour = (TextView) findViewById(R.id.textViewCCLastFour);
+        product1Quantity = (TextView) findViewById(R.id.textView1);
+        product2Quantity = (TextView) findViewById(R.id.textView12);
+        product1Price = (TextView) findViewById(R.id.textView3);
+        product2Price = (TextView) findViewById(R.id.textView32);
+        totalToPay = (TextView) findViewById(R.id.textView323);
+
 
         buttonPlaceOrder = (Button) findViewById(R.id.buttonPlaceOrder);
         buttonPlaceOrder.setOnClickListener(new View.OnClickListener() {
@@ -78,9 +95,7 @@ public class CheckoutActivity extends AppCompatActivity {
                             "Error",
                             "You Need to Select a Credit Card!");
                 } else {
-                    final double ORDER_AMOUNT_FOR_CCAPI = 10.5;
-                    final double ORDER_AMOUNT_AVOID_CHALENGE = 10;
-                    final double ORDER_AMOUNT_FOR_CHALENGE = 100;
+                    final double ORDER_AMOUNT = totalToPay.getText().equals("$10.50")?10.5:140.0;
 
                     final String ORDER_ID = "" + System.currentTimeMillis();
                     final String ORDER_DESCRIPTION = "ORDER #" + ORDER_ID;
@@ -89,9 +104,10 @@ public class CheckoutActivity extends AppCompatActivity {
                     final SdkInfo sdk_info = getThreeDSTransactionData();
 
                     final Order order = new Order();
-                    order.setAmount(ORDER_AMOUNT_AVOID_CHALENGE);
+                    order.setAmount(ORDER_AMOUNT);
                     order.setDescription(ORDER_DESCRIPTION);
                     order.setDev_reference(DEV_REFERENCE);
+                    order.setVat(0);
                     Log.i("MIO", String.valueOf(order.getAmount()));
 
                     final Card card = new Card();
@@ -105,23 +121,43 @@ public class CheckoutActivity extends AppCompatActivity {
                     showPayDialog(mContext,
                             new PaymentDialogCallback() {
 
-                                private   void launchAuthenticate(){
+                                private void launchAuthenticate(){
                                     pd.show();
-                                    authenticate(mContext, Constants.USER_ID, Constants.USER_EMAIL, order, card, sdk_info, "http://paymentez-stg-hrd.appspot.com/api/v1/test/application_callback/?modirium=True", "SDK", new AuthenticationCallback() {
-                                        public void onSuccess(CreateAuthenticateResponse response) {
-                                            boolean challenge = response.getAuthentication().getStatus().contentEquals("C");
-                                            boolean authenticated = response.getAuthentication().getStatus().contentEquals("Y");
+                                    debitWToken(mContext, Constants.USER_ID, Constants.USER_EMAIL, order, CARD_TOKEN, sdk_info, "http://paymentez-stg-hrd.appspot.com/api/v1/test/application_callback/?modirium=True", "SDK", new DebitWTokenCallback() {
+                                        public void onSuccess(CreateDebitWTokenResponse response) {
+                                            boolean challenge = response.getTree_ds().getAuthentication().getStatus().contentEquals("C");
+                                            boolean authenticated = response.getTree_ds().getAuthentication().getStatus().contentEquals("Y");
 
                                             if(challenge)
                                                 doChallenge(response);
-                                            else if (authenticated)
-                                                payment();
-                                            else
+                                            else if (authenticated){
+                                                pd.dismiss();
+                                                Alert.showAuthResponseDialog(mContext,
+                                                        "Authenticated! Continue with debit?",
+                                                        "Status: " + response.getTree_ds().getAuthentication().getStatus() + "\n" +
+                                                                "Message: " + response.getTree_ds().getAuthentication().getReturn_message() + "\n" +
+                                                                "Code: " + response.getTree_ds().getAuthentication().getReturn_code(), new PaymentDialogCallback() {
+                                                            @Override
+                                                            public void onAccept() {
+                                                                pd.show();
+                                                                payment();
+                                                            }
+
+                                                            @Override
+                                                            public void onAvoid() {
+
+                                                            }
+                                                        });
+                                            }
+
+                                            else{
+                                                pd.dismiss();
                                                 Alert.show(mContext,
                                                         "Authentication",
-                                                        "Status: " + response.getAuthentication().getStatus() + "\n" +
-                                                                "Message: " + response.getAuthentication().getReturn_message() + "\n" +
-                                                                "Code: " + response.getAuthentication().getReturn_code());
+                                                        "Status: " + response.getTree_ds().getAuthentication().getStatus() + "\n" +
+                                                                "Message: " + response.getTree_ds().getAuthentication().getReturn_message() + "\n" +
+                                                                "Code: " + response.getTree_ds().getAuthentication().getReturn_code());
+                                            }
                                             //TODO: Create charge or Save Token to your backend
                                         }
 
@@ -140,7 +176,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                 private void payment(){
                                     backendService.createCharge(Constants.USER_ID, getSessionId(mContext),
-                                            CARD_TOKEN, ORDER_AMOUNT_FOR_CCAPI, DEV_REFERENCE, ORDER_DESCRIPTION).enqueue(new Callback<CreateChargeResponse>() {
+                                            CARD_TOKEN, ORDER_AMOUNT, DEV_REFERENCE, ORDER_DESCRIPTION).enqueue(new Callback<CreateChargeResponse>() {
                                         @Override
                                         public void onResponse(Call<CreateChargeResponse> call, Response<CreateChargeResponse> response) {
                                             pd.dismiss();
@@ -175,18 +211,43 @@ public class CheckoutActivity extends AppCompatActivity {
                                     });
                                 }
 
-                                private void doChallenge(CreateAuthenticateResponse response){
+                                private void doChallenge(CreateDebitWTokenResponse response){
                                     doChallengeThreeDS(mActivity, response, new ChallengeCallback() {
 
                                         @Override
-                                        public void completed(String transactionStatus) {
+                                        public void completed(final String transactionId, final String transactionStatus) {
+                                            pd.dismiss();
                                             boolean authenticated = transactionStatus.contentEquals("Y");
                                             if(authenticated)
-                                                payment();
+                                            {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+
+                                                        Alert.show(mContext,
+                                                                "Authenticated!",
+                                                                "Status: " + transactionStatus + "\n" +
+                                                                        "Transaction ID: " + transactionId + "\n");
+                                                    }
+                                                });
+
+                                            }else{
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        Alert.show(mContext,
+                                                                "Authentication",
+                                                                "Status: " + transactionStatus + "\n" +
+                                                                        "Transaction ID: " + transactionId + "\n");
+                                                    }
+                                                });
+
+                                            }
                                         }
 
                                         @Override
                                         public void cancelled() {
+                                            pd.dismiss();
                                             Alert.show(mContext,
                                                     "Cancelled",
                                                     "");
@@ -194,6 +255,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                         @Override
                                         public void timedout() {
+                                            pd.dismiss();
                                             Alert.show(mContext,
                                                     "Timeout",
                                                     "");
@@ -201,6 +263,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                         @Override
                                         public void protocolError(PaymentezError error) {
+                                            pd.dismiss();
                                             Alert.show(mContext,
                                                     "Error",
                                                     "Type: " + error.getType() + "\n" +
@@ -210,6 +273,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                         @Override
                                         public void runtimeError(PaymentezError error) {
+                                            pd.dismiss();
                                             Alert.show(mContext,
                                                     "Error",
                                                     "Type: " + error.getType() + "\n" +
@@ -221,14 +285,12 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                 @Override
                                 public void onAccept() {
-                                    order.setAmount(ORDER_AMOUNT_FOR_CHALENGE);
-                                    Log.i("MIO", String.valueOf(order.getAmount()));
                                     launchAuthenticate();
                                 }
 
                                 @Override
                                 public void onAvoid() {
-                                    launchAuthenticate();
+                                    payment();
                                 }
                             });
 
@@ -251,9 +313,30 @@ public class CheckoutActivity extends AppCompatActivity {
             case android.R.id.home:
                 finish();
                 return true;
+            case R.id.menu_1:
+                product1Quantity.setText("1");
+                product2Quantity.setText("1");
+                product1Price.setText("$3.50");
+                product2Price.setText("$7.00");
+                totalToPay.setText("$10.50");
+                return true;
+            case R.id.menu_2:
+                product1Quantity.setText("10");
+                product2Quantity.setText("15");
+                product1Price.setText("$35.00");
+                product2Price.setText("$105.00");
+                totalToPay.setText("$140.00");
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.activity_checkout_menu, menu);
+        return true;
     }
 
     @Override

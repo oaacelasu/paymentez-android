@@ -36,8 +36,11 @@ import com.paymentez.android.rest.TokenCallback;
 import com.paymentez.android.rest.model.CardBinResponse;
 import com.paymentez.android.rest.model.CreateAuthenticateRequest;
 import com.paymentez.android.rest.model.CreateAuthenticateResponse;
+import com.paymentez.android.rest.model.CreateDebitWTokenRequest;
+import com.paymentez.android.rest.model.CreateDebitWTokenResponse;
 import com.paymentez.android.rest.model.CreateTokenRequest;
 import com.paymentez.android.rest.model.CreateTokenResponse;
+import com.paymentez.android.rest.model.DebitWTokenCallback;
 import com.paymentez.android.rest.model.Ephemeral;
 import com.paymentez.android.rest.model.ErrorResponse;
 import com.paymentez.android.rest.model.Order;
@@ -61,7 +64,7 @@ import retrofit2.Response;
  */
 public class Paymentez{
 
-    private static boolean TEST_MODE;
+    public static boolean TEST_MODE;
     private static String PAYMENTEZ_CLIENT_APP_CODE;
     private static String PAYMENTEZ_CLIENT_APP_KEY;
 
@@ -131,13 +134,13 @@ public class Paymentez{
         return transaction.getProgressView(currentActivity);
     }
 
-    public static void doChallengeThreeDS(final Activity activity, CreateAuthenticateResponse response, final ChallengeCallback callback, final int timeout){
+    public static void doChallengeThreeDS(final Activity activity, CreateDebitWTokenResponse response, final ChallengeCallback callback, final int timeout){
 
         final ChallengeParameters challengeParameters = new ChallengeParameters();
-        challengeParameters.set3DSServerTransactionID(response.getAuthentication().getReference_id());
-        challengeParameters.setAcsTransactionID(response.getSdk_response().getAcs_trans_id());
-        challengeParameters.setACSSignedContent(response.getSdk_response().getAcs_signed_content());
-        challengeParameters.setAcsRefNumber(response.getSdk_response().getAcs_reference_number());
+        challengeParameters.set3DSServerTransactionID(response.getTree_ds().getAuthentication().getReference_id());
+        challengeParameters.setAcsTransactionID(response.getTree_ds().getSdk_response().getAcs_trans_id());
+        challengeParameters.setACSSignedContent(response.getTree_ds().getSdk_response().getAcs_signed_content());
+        challengeParameters.setAcsRefNumber(response.getTree_ds().getSdk_response().getAcs_reference_number());
         new Thread() {
             public void run() {
                 transaction.doChallenge(activity, challengeParameters, new ChallengeStatusReceiver() {
@@ -145,7 +148,8 @@ public class Paymentez{
                     public void completed(CompletionEvent completionEvent) {
 //At this point, the Merchant app can contact the 3DS Server
 //to determine the result of the challenge
-                        callback.completed(completionEvent.getTransactionStatus());
+
+                        callback.completed(completionEvent.getSDKTransactionID(), completionEvent.getTransactionStatus());
 
                     }
 
@@ -320,6 +324,59 @@ public class Paymentez{
         });
     }
 
+
+    public static void debitWToken(Context mContext, @NonNull final String uid, @NonNull final String email, @NonNull final Order order, @NonNull final String cardToken, @NonNull final SdkInfo sdk_info, @NonNull final String term_url, @NonNull final String device_type,  @NonNull final DebitWTokenCallback callback) {
+
+        paymentezService = PaymenezClient.getClient(mContext, TEST_MODE, PAYMENTEZ_CLIENT_APP_CODE, PAYMENTEZ_CLIENT_APP_KEY).create(PaymentezService.class);
+        User user = new User();
+        user.setId(uid);
+        user.setEmail(email);
+
+        CreateDebitWTokenRequest createDebitWTokenRequest = new CreateDebitWTokenRequest();
+        createDebitWTokenRequest.setUser(user);
+        createDebitWTokenRequest.setOrder(order);
+        createDebitWTokenRequest.setCard(cardToken);
+        createDebitWTokenRequest.setExtra_params(term_url, device_type, false, sdk_info);
+
+        paymentezService.debitWToken(createDebitWTokenRequest).enqueue(new Callback<CreateDebitWTokenResponse>() {
+            @Override
+            public void onResponse(Call<CreateDebitWTokenResponse> call, Response<CreateDebitWTokenResponse> response) {
+                CreateDebitWTokenResponse createDebitWTokenResponse = response.body();
+                Log.d("MIO", response.toString());
+                if(response.isSuccessful()) {
+                    callback.onSuccess(createDebitWTokenResponse);
+
+                    return;
+                }else {
+                    PaymentezError error
+                            = new PaymentezError("Exception", "", "General Error");
+                    try {
+                        Gson gson = new GsonBuilder().create();
+                        ErrorResponse errorResponse = gson.fromJson(response.errorBody().string(), ErrorResponse.class);
+                        callback.onError(errorResponse.getError());
+                        return;
+                    } catch (Exception e) {
+                        try {
+                            error = new PaymentezError("Exception", "Http Code: " + response.code(), response.message());
+                        } catch (Exception e2) {
+                        }
+                    }
+                    callback.onError(error);
+                    return;
+
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CreateDebitWTokenResponse> call, Throwable e) {
+                PaymentezError error
+                        = new PaymentezError("Network Exception",
+                        "Invoked when a network exception occurred communicating to the server.", e.getLocalizedMessage());
+                callback.onError(error);
+                return;
+            }
+        });
+    }
 
     /**
      * The session ID is a parameter Paymentez use for fraud purposes.

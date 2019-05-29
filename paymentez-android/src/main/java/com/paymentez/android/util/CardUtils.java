@@ -3,6 +3,7 @@ package com.paymentez.android.util;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.paymentez.android.Paymentez;
 import com.paymentez.android.model.Card;
 
 import static com.paymentez.android.model.Card.CardBrand;
@@ -53,6 +54,9 @@ public class CardUtils {
     static boolean isValidLuhnNumber(@Nullable String cardNumber) {
         if (cardNumber == null) {
             return false;
+        }
+        if (Paymentez.TEST_MODE){
+            return true;
         }
 
         boolean isOdd = true;

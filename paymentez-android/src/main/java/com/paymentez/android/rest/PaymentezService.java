@@ -4,6 +4,8 @@ import com.google.gson.JsonObject;
 import com.paymentez.android.rest.model.CardBinResponse;
 import com.paymentez.android.rest.model.CreateAuthenticateRequest;
 import com.paymentez.android.rest.model.CreateAuthenticateResponse;
+import com.paymentez.android.rest.model.CreateDebitWTokenRequest;
+import com.paymentez.android.rest.model.CreateDebitWTokenResponse;
 import com.paymentez.android.rest.model.CreateTokenRequest;
 import com.paymentez.android.rest.model.CreateTokenResponse;
 import retrofit2.Call;
@@ -29,4 +31,6 @@ public interface PaymentezService {
     @POST("/v2/3ds/authenticate/")
     Call<CreateAuthenticateResponse> authenticate (@Body CreateAuthenticateRequest createAuthenticateRequest);
 
+    @POST("/v2/transaction/debit")
+    Call<CreateDebitWTokenResponse> debitWToken (@Body CreateDebitWTokenRequest createDebitWTokenResponse);
 }
