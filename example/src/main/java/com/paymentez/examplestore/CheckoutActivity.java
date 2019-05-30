@@ -110,11 +110,6 @@ public class CheckoutActivity extends AppCompatActivity {
                     order.setVat(0);
                     Log.i("MIO", String.valueOf(order.getAmount()));
 
-                    final Card card = new Card();
-                    card.setNumber("4116020000001087");
-                    card.setHolderName("Oscar Acelas");
-                    card.setExpiryMonth(12);
-                    card.setExpiryYear(2030);
 
                     final ProgressDialog pd = getProgressDialog(mActivity);
 
@@ -132,25 +127,12 @@ public class CheckoutActivity extends AppCompatActivity {
                                                 doChallenge(response);
                                             else if (authenticated){
                                                 pd.dismiss();
-                                                Alert.showAuthResponseDialog(mContext,
-                                                        "Authenticated! Continue with debit?",
+                                                Alert.show(mContext,
+                                                        "Authenticated!",
                                                         "Status: " + response.getTree_ds().getAuthentication().getStatus() + "\n" +
                                                                 "Message: " + response.getTree_ds().getAuthentication().getReturn_message() + "\n" +
-                                                                "Code: " + response.getTree_ds().getAuthentication().getReturn_code(), new PaymentDialogCallback() {
-                                                            @Override
-                                                            public void onAccept() {
-                                                                pd.show();
-                                                                payment();
-                                                            }
-
-                                                            @Override
-                                                            public void onAvoid() {
-
-                                                            }
-                                                        });
-                                            }
-
-                                            else{
+                                                                "Code: " + response.getTree_ds().getAuthentication().getReturn_code());
+                                            } else{
                                                 pd.dismiss();
                                                 Alert.show(mContext,
                                                         "Authentication",
@@ -158,7 +140,6 @@ public class CheckoutActivity extends AppCompatActivity {
                                                                 "Message: " + response.getTree_ds().getAuthentication().getReturn_message() + "\n" +
                                                                 "Code: " + response.getTree_ds().getAuthentication().getReturn_code());
                                             }
-                                            //TODO: Create charge or Save Token to your backend
                                         }
 
                                         public void onError(PaymentezError error) {
