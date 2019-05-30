@@ -95,7 +95,7 @@ public class CheckoutActivity extends AppCompatActivity {
                             "Error",
                             "You Need to Select a Credit Card!");
                 } else {
-                    final double ORDER_AMOUNT = totalToPay.getText().equals("$10.50")?10.5:140.0;
+                    final double ORDER_AMOUNT = totalToPay.getText().equals("$15.00")?15.0:100.0;
 
                     final String ORDER_ID = "" + System.currentTimeMillis();
                     final String ORDER_DESCRIPTION = "ORDER #" + ORDER_ID;
@@ -229,37 +229,61 @@ public class CheckoutActivity extends AppCompatActivity {
                                         @Override
                                         public void cancelled() {
                                             pd.dismiss();
-                                            Alert.show(mContext,
-                                                    "Cancelled",
-                                                    "");
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Alert.show(mContext,
+                                                            "Cancelled",
+                                                            "");
+                                                }
+                                            });
+
                                         }
 
                                         @Override
                                         public void timedout() {
                                             pd.dismiss();
-                                            Alert.show(mContext,
-                                                    "Timeout",
-                                                    "");
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Alert.show(mContext,
+                                                            "Timeout",
+                                                            "");
+                                                }
+                                            });
+
                                         }
 
                                         @Override
-                                        public void protocolError(PaymentezError error) {
+                                        public void protocolError(final PaymentezError error) {
                                             pd.dismiss();
-                                            Alert.show(mContext,
-                                                    "Error",
-                                                    "Type: " + error.getType() + "\n" +
-                                                            "Help: " + error.getHelp() + "\n" +
-                                                            "Description: " + error.getDescription());
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Alert.show(mContext,
+                                                            "Error",
+                                                            "Type: " + error.getType() + "\n" +
+                                                                    "Help: " + error.getHelp() + "\n" +
+                                                                    "Description: " + error.getDescription());
+                                                }
+                                            });
+
                                         }
 
                                         @Override
-                                        public void runtimeError(PaymentezError error) {
+                                        public void runtimeError(final PaymentezError error) {
                                             pd.dismiss();
-                                            Alert.show(mContext,
-                                                    "Error",
-                                                    "Type: " + error.getType() + "\n" +
-                                                            "Help: " + error.getHelp() + "\n" +
-                                                            "Description: " + error.getDescription());
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Alert.show(mContext,
+                                                            "Error",
+                                                            "Type: " + error.getType() + "\n" +
+                                                                    "Help: " + error.getHelp() + "\n" +
+                                                                    "Description: " + error.getDescription());
+                                                }
+                                            });
+
                                         }
                                     }, 6);
                                 }
@@ -297,16 +321,16 @@ public class CheckoutActivity extends AppCompatActivity {
             case R.id.menu_1:
                 product1Quantity.setText("1");
                 product2Quantity.setText("1");
-                product1Price.setText("$3.50");
-                product2Price.setText("$7.00");
-                totalToPay.setText("$10.50");
+                product1Price.setText("$5.00");
+                product2Price.setText("$10.00");
+                totalToPay.setText("$15.00");
                 return true;
             case R.id.menu_2:
-                product1Quantity.setText("10");
-                product2Quantity.setText("15");
-                product1Price.setText("$35.00");
-                product2Price.setText("$105.00");
-                totalToPay.setText("$140.00");
+                product1Quantity.setText("6");
+                product2Quantity.setText("7");
+                product1Price.setText("$30.00");
+                product2Price.setText("$70.00");
+                totalToPay.setText("$100.00");
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
