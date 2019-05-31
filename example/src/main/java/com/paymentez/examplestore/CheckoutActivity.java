@@ -129,16 +129,30 @@ public class CheckoutActivity extends AppCompatActivity {
                                                 pd.dismiss();
                                                 Alert.show(mContext,
                                                         "Authenticated!",
-                                                        "Status: " + response.getTree_ds().getAuthentication().getStatus() + "\n" +
-                                                                "Message: " + response.getTree_ds().getAuthentication().getReturn_message() + "\n" +
-                                                                "Code: " + response.getTree_ds().getAuthentication().getReturn_code());
+                                                        "Transaction Id: " + response.getTransaction().getId() + "\n" +
+                                                                "Amount: " + response.getTransaction().getAmount() + "\n" +
+
+                                                                "Status: " + response.getTransaction().getStatus() +" -> "+ response.getTree_ds().getAuthentication().getReturn_message() +"\n" +
+
+                                                                "Cavv: " + response.getTree_ds().getAuthentication().getCavv() + "\n" +
+                                                                "Xid: " + response.getTree_ds().getAuthentication().getXid() + "\n" +
+                                                                "Eci: " + response.getTree_ds().getAuthentication().getEci() + "\n" +
+                                                                "Version: " + response.getTree_ds().getAuthentication().getVersion()+ "\n" +
+                                                                "ReferenceID: " + response.getTree_ds().getAuthentication().getReference_id());
                                             } else{
                                                 pd.dismiss();
                                                 Alert.show(mContext,
-                                                        "Authentication",
-                                                        "Status: " + response.getTree_ds().getAuthentication().getStatus() + "\n" +
-                                                                "Message: " + response.getTree_ds().getAuthentication().getReturn_message() + "\n" +
-                                                                "Code: " + response.getTree_ds().getAuthentication().getReturn_code());
+                                                        "Something went wrong!",
+                                                        "Transaction Id: " + response.getTransaction().getId() + "\n" +
+                                                                "Amount: " + response.getTransaction().getAmount() + "\n" +
+
+                                                                "Status: " + response.getTransaction().getStatus() +" -> "+ response.getTree_ds().getAuthentication().getReturn_message() +"\n" +
+
+                                                                "Cavv: " + response.getTree_ds().getAuthentication().getCavv() + "\n" +
+                                                                "Xid: " + response.getTree_ds().getAuthentication().getXid() + "\n" +
+                                                                "Eci: " + response.getTree_ds().getAuthentication().getEci() + "\n" +
+                                                                "Version: " + response.getTree_ds().getAuthentication().getVersion()+ "\n" +
+                                                                "ReferenceID: " + response.getTree_ds().getAuthentication().getReference_id());
                                             }
                                         }
 
@@ -154,6 +168,8 @@ public class CheckoutActivity extends AppCompatActivity {
                                         }
                                     });
                                 }
+
+
 
                                 private void payment(){
                                     backendService.createCharge(Constants.USER_ID, getSessionId(mContext),
@@ -196,7 +212,7 @@ public class CheckoutActivity extends AppCompatActivity {
                                     doChallengeThreeDS(mActivity, response, new ChallengeCallback() {
 
                                         @Override
-                                        public void completed(final String transactionId, final String transactionStatus) {
+                                        public void completed(final String message, final String transactionStatus) {
                                             pd.dismiss();
                                             boolean authenticated = transactionStatus.contentEquals("Y");
                                             if(authenticated)
@@ -207,8 +223,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                                         Alert.show(mContext,
                                                                 "Authenticated!",
-                                                                "Status: " + transactionStatus + "\n" +
-                                                                        "Transaction ID: " + transactionId + "\n");
+                                                                message);
                                                     }
                                                 });
 
@@ -217,9 +232,8 @@ public class CheckoutActivity extends AppCompatActivity {
                                                     @Override
                                                     public void run() {
                                                         Alert.show(mContext,
-                                                                "Authentication",
-                                                                "Status: " + transactionStatus + "\n" +
-                                                                        "Transaction ID: " + transactionId + "\n");
+                                                                "Something went wrong",
+                                                                message);
                                                     }
                                                 });
 

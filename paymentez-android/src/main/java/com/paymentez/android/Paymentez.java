@@ -3,6 +3,7 @@ package com.paymentez.android;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,15 +15,19 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.kount.api.DataCollector;
+import com.modirum.threedsv2.core.ButtonCustomization;
 import com.modirum.threedsv2.core.ChallengeParameters;
 import com.modirum.threedsv2.core.ChallengeStatusReceiver;
 import com.modirum.threedsv2.core.CompletionEvent;
 import com.modirum.threedsv2.core.ConfigParameters;
+import com.modirum.threedsv2.core.LabelCustomization;
 import com.modirum.threedsv2.core.ProtocolConstants;
 import com.modirum.threedsv2.core.ProtocolErrorEvent;
 import com.modirum.threedsv2.core.RuntimeErrorEvent;
+import com.modirum.threedsv2.core.TextBoxCustomization;
 import com.modirum.threedsv2.core.ThreeDS2Service;
 import com.modirum.threedsv2.core.ThreeDSecurev2Service;
+import com.modirum.threedsv2.core.ToolbarCustomization;
 import com.modirum.threedsv2.core.Transaction;
 import com.modirum.threedsv2.core.UiCustomization;
 import com.modirum.threedsv2.core.Warning;
@@ -134,13 +139,14 @@ public class Paymentez{
         return transaction.getProgressView(currentActivity);
     }
 
-    public static void doChallengeThreeDS(final Activity activity, CreateDebitWTokenResponse response, final ChallengeCallback callback, final int timeout){
+    public static void doChallengeThreeDS(final Activity activity, final CreateDebitWTokenResponse response, final ChallengeCallback callback, final int timeout){
 
         final ChallengeParameters challengeParameters = new ChallengeParameters();
         challengeParameters.set3DSServerTransactionID(response.getTree_ds().getAuthentication().getReference_id());
         challengeParameters.setAcsTransactionID(response.getTree_ds().getSdk_response().getAcs_trans_id());
         challengeParameters.setACSSignedContent(response.getTree_ds().getSdk_response().getAcs_signed_content());
         challengeParameters.setAcsRefNumber(response.getTree_ds().getSdk_response().getAcs_reference_number());
+
         new Thread() {
             public void run() {
                 transaction.doChallenge(activity, challengeParameters, new ChallengeStatusReceiver() {
@@ -149,7 +155,16 @@ public class Paymentez{
 //At this point, the Merchant app can contact the 3DS Server
 //to determine the result of the challenge
 
-                        callback.completed(completionEvent.getSDKTransactionID(), completionEvent.getTransactionStatus());
+                        callback.completed("Transaction Id: " + completionEvent.getSDKTransactionID() + "\n" +
+                                "Amount: " + response.getTransaction().getAmount() + "\n" +
+
+                                "Status: " + response.getTransaction().getStatus() +" -> "+ response.getTree_ds().getAuthentication().getReturn_message() +"\n" +
+
+                                "Cavv: " + response.getTree_ds().getAuthentication().getCavv() + "\n" +
+                                "Xid: " + response.getTree_ds().getAuthentication().getXid() + "\n" +
+                                "Eci: " + response.getTree_ds().getAuthentication().getEci() + "\n" +
+                                "Version: " + response.getTree_ds().getAuthentication().getVersion()+ "\n" +
+                                "ReferenceID: " + response.getTree_ds().getAuthentication().getReference_id(), completionEvent.getTransactionStatus());
 
                     }
 
@@ -434,6 +449,28 @@ public class Paymentez{
             service = new ThreeDSecurev2Service(mContext);
             configParam = new ConfigParameters();
             uiConfig = new UiCustomization();
+
+            TextBoxCustomization textBoxCustomization = new TextBoxCustomization();
+            textBoxCustomization.setCornerRadius(10);
+            uiConfig.setTextBoxCustomization(textBoxCustomization);
+
+            LabelCustomization labelCustomization = new LabelCustomization();
+            labelCustomization.setTextFontName(Typeface.MONOSPACE.toString());
+            labelCustomization.setTextFontSize(18);
+            uiConfig.setLabelCustomization(labelCustomization);
+
+            ToolbarCustomization toolbarCustomization = new ToolbarCustomization();
+            toolbarCustomization.setBackgroundColor("#E70B22");
+            toolbarCustomization.setTextColor("#FFFFFF");
+            toolbarCustomization.setTextFontSize(28);
+            uiConfig.setToolbarCustomization(toolbarCustomization);
+
+            ButtonCustomization buttonCustomization = new ButtonCustomization();
+            buttonCustomization.setBackgroundColor("#E70B22");
+            buttonCustomization.setCornerRadius(10);
+            buttonCustomization.setTextColor("#FFFFFF");
+            uiConfig.setButtonCustomization(buttonCustomization, UiCustomization.ButtonType.SUBMIT);
+
 
             service.initialize(mContext, configParam, null, uiConfig);
 

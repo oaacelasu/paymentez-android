@@ -5,7 +5,7 @@ import com.paymentez.android.rest.model.PaymentezError;
 
 public interface ChallengeCallback {
 
-    void completed(String transactionId, String transactionStatus);
+    void completed(String message, String transactionStatus);
 
     void cancelled();
 
