@@ -119,7 +119,7 @@ public class Paymentez{
     }
 
     public static SdkInfo getThreeDSTransactionData(){
-        transaction = service.createTransaction("VISA", "2.1.0");
+        transaction = service.createTransaction("MASTERCARD", "2.1.0");
 
         SdkInfo sdkInfo = new SdkInfo();
         sdkInfo.setTrans_id(transaction.getAuthenticationRequestParameters().getSDKTransactionID());
@@ -460,13 +460,13 @@ public class Paymentez{
             uiConfig.setLabelCustomization(labelCustomization);
 
             ToolbarCustomization toolbarCustomization = new ToolbarCustomization();
-            toolbarCustomization.setBackgroundColor("#E70B22");
+            toolbarCustomization.setBackgroundColor("#4CAF50");
             toolbarCustomization.setTextColor("#FFFFFF");
             toolbarCustomization.setTextFontSize(28);
             uiConfig.setToolbarCustomization(toolbarCustomization);
 
             ButtonCustomization buttonCustomization = new ButtonCustomization();
-            buttonCustomization.setBackgroundColor("#E70B22");
+            buttonCustomization.setBackgroundColor("#4CAF50");
             buttonCustomization.setCornerRadius(10);
             buttonCustomization.setTextColor("#FFFFFF");
             uiConfig.setButtonCustomization(buttonCustomization, UiCustomization.ButtonType.SUBMIT);
