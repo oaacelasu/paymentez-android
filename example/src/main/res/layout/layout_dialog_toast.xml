@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:id="@+id/toast_dialog_root"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!--Profile image for the chat head.-->
+    <ImageView
+        android:id="@+id/toast_dialog_profile_iv"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="58dp"
+        android:background="@color/colorWhite"
+        tools:ignore="ContentDescription"/>
+
+</RelativeLayout>

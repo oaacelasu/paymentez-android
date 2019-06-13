@@ -3,7 +3,10 @@ package com.paymentez.examplestore;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -13,6 +16,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.paymentez.android.Paymentez;
 import com.paymentez.android.model.Card;
@@ -20,6 +24,7 @@ import com.paymentez.android.rest.InitCallback;
 import com.paymentez.android.rest.model.PaymentezError;
 import com.paymentez.examplestore.utils.Alert;
 import com.paymentez.examplestore.utils.Constants;
+import com.paymentez.examplestore.utils.ToastDialogService;
 
 import java.util.List;
 
@@ -28,15 +33,34 @@ public class HomeActivity extends AppCompatActivity
 
     Button buttonMakeOrder;
     Context mContext;
+    private static final int CODE_DRAW_OVER_OTHER_APP_PERMISSION = 2084;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         mContext = this;
+        //Check if the application has draw over other apps permission or not?
+        //This permission is by default available for API<23. But for API > 23
+        //you have to ask for the permission in runtime.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+
+            //If the draw over permission is not available open the settings screen
+            //to grant the permission.
+            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+            startActivityForResult(intent, CODE_DRAW_OVER_OTHER_APP_PERMISSION);
+        } else {
+            initializeView();
+        }
+    }
+
+    /**
+     * Set and initialize the view elements.
+     */
+    private void initializeView() {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
@@ -54,7 +78,6 @@ public class HomeActivity extends AppCompatActivity
                 startActivity(intent);
             }
         });
-
         //Init library
         final ProgressDialog pd = new ProgressDialog(mContext);
         pd.setMessage("");
@@ -76,7 +99,9 @@ public class HomeActivity extends AppCompatActivity
                 pd.dismiss();
             }
         });
+
     }
+
 
     @Override
     public void onBackPressed() {
@@ -108,7 +133,20 @@ public class HomeActivity extends AppCompatActivity
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
-
-
-
-}
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == CODE_DRAW_OVER_OTHER_APP_PERMISSION) {
+            //Check if the permission is granted or not.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+                initializeView();
+            } else { //Permission is not available
+                Toast.makeText(this,
+                        "Draw over other app permission not available. Closing the application" ,
+                        Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+    }
