@@ -57,6 +57,8 @@ public class CheckoutActivity extends AppCompatActivity {
     Context mContext;
     Activity mActivity;
     String CARD_TOKEN = "";
+    String CARD_TYPE = "";
+
     int SELECT_CARD_REQUEST = 1004;
 
     TextView product1Quantity;
@@ -103,7 +105,7 @@ public class CheckoutActivity extends AppCompatActivity {
                     final String ORDER_DESCRIPTION = "ORDER #" + ORDER_ID;
                     final String DEV_REFERENCE = ORDER_ID;
 
-                    final SdkInfo sdk_info = getThreeDSTransactionData();
+                    final SdkInfo sdk_info = getThreeDSTransactionData(CARD_TYPE.equals(Card.MASTERCARD)?"MASTERCARD":"VISA");
 
                     final Order order = new Order();
                     order.setAmount(ORDER_AMOUNT);
@@ -217,7 +219,7 @@ public class CheckoutActivity extends AppCompatActivity {
                                         @Override
                                         public void completed(final String message, final String transactionStatus) {
                                             pd.dismiss();
-                                            stopService(myService);
+//                                            stopService(myService);
                                             boolean authenticated = transactionStatus.contentEquals("Y");
                                             if(authenticated)
                                             {
@@ -304,16 +306,16 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                         }
                                     }, 6);
-                                    new CountDownTimer(5000,  5000) {
-
-                                        public void onTick(long millisUntilFinished) {
-                                        }
-
-                                        public void onFinish() {
-                                            startService(myService);
-                                        }
-
-                                    }.start();
+//                                    new CountDownTimer(5000,  5000) {
+//
+//                                        public void onTick(long millisUntilFinished) {
+//                                        }
+//
+//                                        public void onFinish() {
+//                                            startService(myService);
+//                                        }
+//
+//                                    }.start();
 
                                 }
 
@@ -380,7 +382,7 @@ public class CheckoutActivity extends AppCompatActivity {
             // Make sure the request was successful
             if (resultCode == RESULT_OK) {
                 CARD_TOKEN = data.getStringExtra("CARD_TOKEN");
-                String CARD_TYPE = data.getStringExtra("CARD_TYPE");
+                CARD_TYPE = data.getStringExtra("CARD_TYPE");
                 String CARD_LAST4 = data.getStringExtra("CARD_LAST4");
 
                 if (CARD_LAST4 != null && !CARD_LAST4.equals("")) {

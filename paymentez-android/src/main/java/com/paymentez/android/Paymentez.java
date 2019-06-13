@@ -118,8 +118,8 @@ public class Paymentez{
         return paymentezService;
     }
 
-    public static SdkInfo getThreeDSTransactionData(){
-        transaction = service.createTransaction("MASTERCARD", "2.1.0");
+    public static SdkInfo getThreeDSTransactionData(String type){
+        transaction = service.createTransaction(type,  "2.1.0");
 
         SdkInfo sdkInfo = new SdkInfo();
         sdkInfo.setTrans_id(transaction.getAuthenticationRequestParameters().getSDKTransactionID());
