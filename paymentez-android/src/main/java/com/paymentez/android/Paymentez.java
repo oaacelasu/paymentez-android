@@ -135,6 +135,7 @@ public class Paymentez{
         sdkInfo.setEphem_pub_key(ephemeral.getKey());
         return sdkInfo;
     }
+
     public static ProgressDialog getProgressDialog(Activity currentActivity){
         return transaction.getProgressView(currentActivity);
     }
@@ -495,7 +496,7 @@ public class Paymentez{
         }
     }
 
-    public static void initThreeDS(Context mContext, @NonNull final InitCallback callback){
+      private static void initThreeDS(Context mContext, @NonNull final InitCallback callback){
         new InitThreeDSTask(mContext, callback).execute();
     }
 }

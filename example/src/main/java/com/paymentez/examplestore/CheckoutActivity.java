@@ -5,7 +5,6 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -20,10 +19,8 @@ import android.widget.TextView;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.paymentez.android.model.Card;
-import com.paymentez.android.rest.AuthenticationCallback;
 import com.paymentez.android.rest.ChallengeCallback;
 import com.paymentez.android.rest.PaymentDialogCallback;
-import com.paymentez.android.rest.model.CreateAuthenticateResponse;
 import com.paymentez.android.rest.model.CreateDebitWTokenResponse;
 import com.paymentez.android.rest.model.DebitWTokenCallback;
 import com.paymentez.android.rest.model.ErrorResponse;
@@ -35,9 +32,6 @@ import com.paymentez.examplestore.rest.RetrofitFactory;
 import com.paymentez.examplestore.rest.model.CreateChargeResponse;
 import com.paymentez.examplestore.utils.Alert;
 import com.paymentez.examplestore.utils.Constants;
-import com.paymentez.examplestore.utils.ToastDialogService;
-
-import org.w3c.dom.Text;
 
 import java.io.IOException;
 
@@ -213,13 +207,11 @@ public class CheckoutActivity extends AppCompatActivity {
                                 }
 
                                 private void doChallenge(CreateDebitWTokenResponse response){
-                                    final Intent myService  = new Intent(CheckoutActivity.this, ToastDialogService.class);
                                     doChallengeThreeDS(mActivity, response, new ChallengeCallback() {
 
                                         @Override
                                         public void completed(final String message, final String transactionStatus) {
                                             pd.dismiss();
-//                                            stopService(myService);
                                             boolean authenticated = transactionStatus.contentEquals("Y");
                                             if(authenticated)
                                             {
@@ -306,17 +298,6 @@ public class CheckoutActivity extends AppCompatActivity {
 
                                         }
                                     }, 6);
-//                                    new CountDownTimer(5000,  5000) {
-//
-//                                        public void onTick(long millisUntilFinished) {
-//                                        }
-//
-//                                        public void onFinish() {
-//                                            startService(myService);
-//                                        }
-//
-//                                    }.start();
-
                                 }
 
                                 @Override

@@ -19,14 +19,10 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.paymentez.android.Paymentez;
-import com.paymentez.android.model.Card;
 import com.paymentez.android.rest.InitCallback;
 import com.paymentez.android.rest.model.PaymentezError;
 import com.paymentez.examplestore.utils.Alert;
 import com.paymentez.examplestore.utils.Constants;
-import com.paymentez.examplestore.utils.ToastDialogService;
-
-import java.util.List;
 
 public class HomeActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
